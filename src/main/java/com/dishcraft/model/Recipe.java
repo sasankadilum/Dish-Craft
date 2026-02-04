@@ -21,4 +21,7 @@ public class Recipe {
     private String imageUrl;
     private List<String> tags;
     private String userId; // reference to user who created it
+
+    private String username;
+    private String userProfilePic;
 }
