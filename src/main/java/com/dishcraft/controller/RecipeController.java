@@ -22,28 +22,28 @@ public class RecipeController {
         this.recipeService = recipeService;
     }
 
-   @PostMapping
-public ResponseEntity<?> createRecipe(@Valid @RequestBody RecipeRequestDTO recipeDTO,
-                                      @RequestHeader(value = "userid", required = false) String userId) {
-    // Check if userId is missing
-    if (userId == null || userId.trim().isEmpty()) {
-        return ResponseEntity
-                .badRequest()
-                .body("Missing required header: Userid");
+    @PostMapping
+    public ResponseEntity<?> createRecipe(@Valid @RequestBody RecipeRequestDTO recipeDTO,
+                                          @RequestHeader(value = "userid", required = false) String userId) {
+        // Check if userId is missing
+        if (userId == null || userId.trim().isEmpty()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body("Missing required header: Userid");
+        }
+
+        Recipe recipe = Recipe.builder()
+                .title(recipeDTO.getTitle())
+                .description(recipeDTO.getDescription())
+                .ingredients(recipeDTO.getIngredients())
+                .instructions(recipeDTO.getInstructions())
+                .imageUrl(recipeDTO.getImageUrl())
+                .tags(recipeDTO.getTags())
+                .userId(userId)
+                .build();
+
+        return ResponseEntity.ok(recipeService.createRecipe(recipe));
     }
-
-    Recipe recipe = Recipe.builder()
-            .title(recipeDTO.getTitle())
-            .description(recipeDTO.getDescription())
-            .ingredients(recipeDTO.getIngredients())
-            .instructions(recipeDTO.getInstructions())
-            .imageUrl(recipeDTO.getImageUrl())
-            .tags(recipeDTO.getTags())
-            .userId(userId)
-            .build();
-
-    return ResponseEntity.ok(recipeService.createRecipe(recipe));
-}
 
 
     @GetMapping
@@ -62,30 +62,30 @@ public ResponseEntity<?> createRecipe(@Valid @RequestBody RecipeRequestDTO recip
     }
 
     @PutMapping("/{id}")
-public ResponseEntity<?> updateRecipe(@PathVariable String id,
-                                     @Valid @RequestBody RecipeRequestDTO recipeDTO,
-                                     @RequestHeader("userId") String userId) {
-    Recipe existingRecipe = recipeService.getRecipeById(id);
-    if (existingRecipe == null) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Recipe not found");
-    }
-    if (!existingRecipe.getUserId().equals(userId)) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not authorized");
-    }
+    public ResponseEntity<?> updateRecipe(@PathVariable String id,
+                                          @Valid @RequestBody RecipeRequestDTO recipeDTO,
+                                          @RequestHeader("userId") String userId) {
+        Recipe existingRecipe = recipeService.getRecipeById(id);
+        if (existingRecipe == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Recipe not found");
+        }
+        if (!existingRecipe.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not authorized");
+        }
 
-    existingRecipe.setTitle(recipeDTO.getTitle());
-    existingRecipe.setDescription(recipeDTO.getDescription());
-    existingRecipe.setIngredients(recipeDTO.getIngredients());
-    existingRecipe.setInstructions(recipeDTO.getInstructions());
-    existingRecipe.setImageUrl(recipeDTO.getImageUrl());
-    existingRecipe.setTags(recipeDTO.getTags());
-    return ResponseEntity.ok(recipeService.updateRecipe(existingRecipe));
-}
+        existingRecipe.setTitle(recipeDTO.getTitle());
+        existingRecipe.setDescription(recipeDTO.getDescription());
+        existingRecipe.setIngredients(recipeDTO.getIngredients());
+        existingRecipe.setInstructions(recipeDTO.getInstructions());
+        existingRecipe.setImageUrl(recipeDTO.getImageUrl());
+        existingRecipe.setTags(recipeDTO.getTags());
+        return ResponseEntity.ok(recipeService.updateRecipe(existingRecipe));
+    }
 
 
     @DeleteMapping("/{id}")
-    public void deleteRecipe(@PathVariable String id, 
-                           @RequestHeader("userId") String userId) {
+    public void deleteRecipe(@PathVariable String id,
+                             @RequestHeader("userId") String userId) {
         Recipe recipe = recipeService.getRecipeById(id);
         if(recipe != null && recipe.getUserId().equals(userId)) {
             recipeService.deleteRecipe(id);
