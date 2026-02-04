@@ -1,442 +1,174 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { UserCircle, LogOut, Camera, Edit3, Save } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { UserCircle, LogOut, Camera, Save, ArrowLeft, Grid, Info, Check } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
+  const [myRecipes, setMyRecipes] = useState([]);
+  const [activeTab, setActiveTab] = useState('posts'); // 'posts' or 'about'
   const [edit, setEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [imagePreview, setImagePreview] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const userId = localStorage.getItem('userId');
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`http://localhost:8080/api/users/${userId}`, {
+        // Fetch User Profile
+        const userRes = await axios.get(`http://localhost:8080/api/users/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setProfile(res.data);
-        if (res.data.profileImage) {
-          setImagePreview(res.data.profileImage);
-        }
+        setProfile(userRes.data);
+        if (userRes.data.profileImage) setImagePreview(userRes.data.profileImage);
+
+        // Fetch User Recipes
+        const recipeRes = await axios.get(`http://localhost:8080/api/recipes/user/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setMyRecipes(recipeRes.data);
       } catch (err) {
-        console.error('Failed to load profile:', err);
+        console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    if (userId && token) {
-      fetchProfile();
-    }
+    if (userId && token) fetchData();
   }, [userId, token]);
-
-  const handleChange = (e) => {
-    setProfile({ ...profile, [e.target.name]: e.target.value });
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImagePreview(URL.createObjectURL(file));
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile({ ...profile, profileImage: reader.result });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
-      setLoading(true);
       const res = await axios.put(`http://localhost:8080/api/users/${userId}`, profile, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProfile(res.data);
       setEdit(false);
-      setShowSuccessModal(true); // Show success modal instead of alert
+      setShowSuccessModal(true);
     } catch (err) {
-      console.error('Update failed:', err);
-      alert('Failed to update profile. Please try again.');
-    } finally {
-      setLoading(false);
+      alert('Update failed!');
     }
-  };
-  const handleCloseSuccessModal = () => {
-    setShowSuccessModal(false);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
+    localStorage.clear();
     window.location.href = '/login';
   };
 
-  const isAdmin = profile?.roles?.includes('ROLE_ADMIN');
-
-  if (loading && !profile) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ 
-        height: '100vh',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
-      }}>
-        <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }} role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loading && !profile) return <div className="text-center mt-5">Loading Profile...</div>;
 
   return (
-    <div className="container py-5" style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(to right, #f5f7fa, #e4e8f0)',
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-    }}>
-      <div className="row">
-        <div className="col-lg-6 col-md-8 col-sm-10 mx-auto">
-          <div className="card shadow-lg" style={{
-            border: 'none',
-            borderRadius: '15px',
-            overflow: 'hidden',
-            transition: 'transform 0.3s ease',
-            ':hover': {
-              transform: 'translateY(-5px)'
-            }
-          }}>
-            <div className="text-white p-5 text-center rounded-top position-relative" style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              paddingBottom: '80px'
-            }}>
-              <button
-                onClick={handleLogout}
-                className="btn btn-light btn-sm position-absolute top-0 end-0 m-3"
-                title="Logout"
-                style={{
-                  borderRadius: '20px',
-                  padding: '5px 15px',
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                <LogOut className="me-1" size={16} /> Logout
-              </button>
+    <div style={{ background: '#fafafa', minHeight: '100vh', paddingBottom: '50px' }}>
+      {/* Header */}
+      <div style={{ maxWidth: '935px', margin: '0 auto', padding: '20px 10px' }} className="d-flex justify-content-between align-items-center">
+        <div className="d-flex align-items-center">
+          <ArrowLeft size={24} onClick={() => navigate('/recipes')} style={{ cursor: 'pointer', marginRight: '15px' }} />
+          <h4 style={{ fontWeight: '600', margin: 0 }}>{profile?.username}</h4>
+        </div>
+        <button onClick={handleLogout} className="btn btn-outline-danger btn-sm">Logout</button>
+      </div>
 
-              <div className="position-relative d-inline-block mb-3" style={{
-                marginTop: '20px'
-              }}>
-                <div className="avatar-upload position-relative">
-                  <div className="avatar-preview rounded-circle border border-4 border-white overflow-hidden" style={{ 
-                    width: '150px', 
-                    height: '150px',
-                    boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
-                  }}>
-                    {imagePreview ? (
-                      <img
-                        src={imagePreview}
-                        alt="Profile"
-                        className="w-100 h-100 object-fit-cover"
-                        style={{
-                          transition: 'transform 0.3s ease',
-                          ':hover': {
-                            transform: 'scale(1.05)'
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className="d-flex justify-content-center align-items-center w-100 h-100" style={{
-                        background: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)'
-                      }}>
-                        <UserCircle size={80} color="#ffffff" />
-                      </div>
-                    )}
-                  </div>
+      <div style={{ maxWidth: '935px', margin: '0 auto', padding: '0 20px' }}>
+        {/* Profile Info Section */}
+        <div className="row mb-5 mt-4">
+          <div className="col-4 d-flex justify-content-center">
+            <div style={{ width: '150px', height: '150px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #dbdbdb' }}>
+              {imagePreview ? <img src={imagePreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="profile" /> : <UserCircle size={150} color="#ccc" />}
+            </div>
+          </div>
+          <div className="col-8">
+            <div className="d-flex align-items-center gap-3 mb-3">
+              <h2 style={{ fontSize: '28px', fontWeight: '300' }}>{profile?.username}</h2>
+              <button onClick={() => setEdit(true)} className="btn btn-light border btn-sm fw-bold">Edit Profile</button>
+              {profile?.roles?.includes('ROLE_ADMIN') && <Link to="/admin" className="btn btn-primary btn-sm fw-bold">Admin</Link>}
+            </div>
+            <div className="d-flex gap-4 mb-3">
+              <span><b>{myRecipes.length}</b> recipes</span>
+              {/* <span><b>0</b> followers</span>
+              <span><b>0</b> following</span> */}
+            </div>
+            <div>
+              <span className="fw-bold">{profile?.firstName} {profile?.lastName}</span>
+              <p className="text-muted">Member</p>
+            </div>
+          </div>
+        </div>
 
-                  {edit && (
-                    <div className="avatar-edit position-absolute bottom-0 end-0">
-                      <label
-                        htmlFor="imageUpload"
-                        className="btn btn-sm btn-light rounded-circle p-2"
-                        title="Change profile picture"
-                        style={{
-                          boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          ':hover': {
-                            transform: 'scale(1.1)',
-                            backgroundColor: '#f8f9fa'
-                          }
-                        }}
-                      >
-                        <Camera size={16} color="#333" />
-                      </label>
-                      <input
-                        id="imageUpload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="d-none"
-                      />
-                    </div>
-                  )}
+        <hr />
+
+        {/* Tabs - Instagram Style */}
+        <div className="d-flex justify-content-center gap-5 mb-4">
+          <div 
+            onClick={() => { setActiveTab('posts'); setEdit(false); }}
+            style={{ cursor: 'pointer', borderTop: activeTab === 'posts' ? '1px solid black' : 'none', paddingTop: '10px', fontSize: '12px', fontWeight: '600', letterSpacing: '1px' }}
+          >
+            <Grid size={14} className="me-1" /> POSTS
+          </div>
+          <div 
+            onClick={() => setActiveTab('about')}
+            style={{ cursor: 'pointer', borderTop: activeTab === 'about' ? '1px solid black' : 'none', paddingTop: '10px', fontSize: '12px', fontWeight: '600', letterSpacing: '1px' }}
+          >
+            <Info size={14} className="me-1" /> ABOUT
+          </div>
+        </div>
+
+        {/* Dynamic Content Based on Tab */}
+        {edit ? (
+           <div className="card p-4 shadow-sm">
+             <form onSubmit={handleUpdate}>
+                <div className="mb-3">
+                  <label className="form-label fw-bold">First Name</label>
+                  <input type="text" className="form-control" value={profile.firstName} onChange={(e) => setProfile({...profile, firstName: e.target.value})} />
                 </div>
-              </div>
-              {/* Success Modal */}
-{showSuccessModal && (
-  <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1050 }}>
-    <div className="modal-dialog modal-dialog-centered">
-      <div className="modal-content">
-        <div className="modal-header bg-success text-white">
-          <h5 className="modal-title">Success!</h5>
-          <button type="button" className="btn-close btn-close-white" onClick={handleCloseSuccessModal}></button>
-        </div>
-        <div className="modal-body text-center py-4">
-          <div className="mb-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#28a745" className="bi bi-check-circle-fill" viewBox="0 0 16 16">
-              <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
-            </svg>
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Last Name</label>
+                  <input type="text" className="form-control" value={profile.lastName} onChange={(e) => setProfile({...profile, lastName: e.target.value})} />
+                </div>
+                <button type="submit" className="btn btn-primary me-2">Save</button>
+                <button type="button" onClick={() => setEdit(false)} className="btn btn-secondary">Cancel</button>
+             </form>
+           </div>
+        ) : activeTab === 'posts' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '28px' }}>
+            {myRecipes.map((recipe) => (
+              <Link to={`/recipes/${recipe.id}`} key={recipe.id} style={{ position: 'relative', aspectRatio: '1/1', overflow: 'hidden' }}>
+                <img 
+                  src={recipe.imageUrl || 'https://via.placeholder.com/300'} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'filter 0.3s' }}
+                  alt={recipe.title}
+                  onMouseEnter={(e) => e.target.style.filter = 'brightness(70%)'}
+                  onMouseLeave={(e) => e.target.style.filter = 'brightness(100%)'}
+                />
+              </Link>
+            ))}
+            {myRecipes.length === 0 && <p className="text-center w-100 mt-4 text-muted">No recipes posted yet.</p>}
           </div>
-          <h4 className="mb-3">Profile Updated Successfully!</h4>
-          <p>Your profile changes have been saved.</p>
-        </div>
-        <div className="modal-footer justify-content-center">
-          <button type="button" className="btn btn-success" onClick={handleCloseSuccessModal}>
-            Continue
-          </button>
-        </div>
+        ) : (
+          <div className="card p-4 border-0 shadow-sm rounded-3">
+            <h5 className="mb-3 border-bottom pb-2">User Information</h5>
+            <p><b>Username:</b> @{profile?.username}</p>
+            <p><b>Full Name:</b> {profile?.firstName} {profile?.lastName}</p>
+          </div>
+        )}
       </div>
-    </div>
-  </div>
-)}
 
-              <h3 className="mb-0" style={{
-                fontSize: '2rem',
-                fontWeight: '600',
-                textShadow: '1px 1px 3px rgba(0,0,0,0.2)',
-                marginTop: '15px'
-              }}>{profile?.firstName} {profile?.lastName}</h3>
-              <p className="text-light mb-0" style={{
-                fontSize: '1.1rem',
-                opacity: '0.9',
-                marginTop: '5px'
-              }}>@{profile?.username}</p>
-
-              {isAdmin && (
-                <Link to="/admin" className="btn btn-warning mt-3" style={{
-                  borderRadius: '20px',
-                  padding: '8px 20px',
-                  fontWeight: '500',
-                  boxShadow: '0 3px 8px rgba(0,0,0,0.1)',
-                  transition: 'all 0.3s ease',
-                  ':hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
-                  }
-                }}>
-                  Go to Admin Dashboard
-                </Link>
-              )}
-            </div>
-
-            <div className="card-body p-4" style={{
-              background: '#ffffff',
-              borderBottomLeftRadius: '15px',
-              borderBottomRightRadius: '15px'
-            }}>
-              {!edit ? (
-                <>
-                  <div className="d-flex justify-content-between align-items-center mb-4" style={{
-                    borderBottom: '1px solid #eee',
-                    paddingBottom: '15px'
-                  }}>
-                    <h5 className="card-title" style={{
-                      fontSize: '1.5rem',
-                      fontWeight: '600',
-                      color: '#333',
-                      margin: '0'
-                    }}>Profile Information</h5>
-                    <button 
-                      onClick={() => setEdit(true)} 
-                      className="btn btn-outline-primary btn-sm"
-                      style={{
-                        borderRadius: '20px',
-                        padding: '5px 15px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        transition: 'all 0.3s ease',
-                        ':hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 3px 8px rgba(0,0,0,0.1)'
-                        }
-                      }}
-                    >
-                      <Edit3 size={16} className="me-1" /> Edit Profile
-                    </button>
-                  </div>
-
-                  <div className="mb-4" style={{
-                    padding: '15px',
-                    background: '#f9f9f9',
-                    borderRadius: '10px',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
-                  }}>
-                    <p className="mb-1" style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      color: '#555'
-                    }}><strong>Username:</strong></p>
-                    <p className="text-muted" style={{
-                      fontSize: '1rem',
-                      margin: '0',
-                      padding: '5px 0'
-                    }}>{profile?.username}</p>
-                  </div>
-
-                  <div className="mb-4" style={{
-                    padding: '15px',
-                    background: '#f9f9f9',
-                    borderRadius: '10px',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
-                  }}>
-                    <p className="mb-1" style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      color: '#555'
-                    }}><strong>First Name:</strong></p>
-                    <p className="text-muted" style={{
-                      fontSize: '1rem',
-                      margin: '0',
-                      padding: '5px 0'
-                    }}>{profile?.firstName}</p>
-                  </div>
-
-                  <div className="mb-4" style={{
-                    padding: '15px',
-                    background: '#f9f9f9',
-                    borderRadius: '10px',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
-                  }}>
-                    <p className="mb-1" style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      color: '#555'
-                    }}><strong>Last Name:</strong></p>
-                    <p className="text-muted" style={{
-                      fontSize: '1rem',
-                      margin: '0',
-                      padding: '5px 0'
-                    }}>{profile?.lastName}</p>
-                  </div>
-                </>
-              ) : (
-                <form onSubmit={handleUpdate}>
-                  <div className="mb-4">
-                    <label htmlFor="firstName" className="form-label" style={{
-                      fontWeight: '500',
-                      color: '#555',
-                      marginBottom: '8px'
-                    }}>First Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="firstName"
-                      name="firstName"
-                      value={profile?.firstName || ''}
-                      onChange={handleChange}
-                      style={{
-                        borderRadius: '10px',
-                        padding: '10px 15px',
-                        border: '1px solid #ddd',
-                        ':focus': {
-                          borderColor: '#667eea',
-                          boxShadow: '0 0 0 0.25rem rgba(102, 126, 234, 0.25)'
-                        }
-                      }}
-                    />
-                  </div>
-
-                  <div className="mb-4">
-                    <label htmlFor="lastName" className="form-label" style={{
-                      fontWeight: '500',
-                      color: '#555',
-                      marginBottom: '8px'
-                    }}>Last Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="lastName"
-                      name="lastName"
-                      value={profile?.lastName || ''}
-                      onChange={handleChange}
-                      style={{
-                        borderRadius: '10px',
-                        padding: '10px 15px',
-                        border: '1px solid #ddd',
-                        ':focus': {
-                          borderColor: '#667eea',
-                          boxShadow: '0 0 0 0.25rem rgba(102, 126, 234, 0.25)'
-                        }
-                      }}
-                    />
-                  </div>
-
-                  <div className="d-grid gap-3" style={{
-                    marginTop: '30px'
-                  }}>
-                    <button 
-                      type="submit" 
-                      className="btn btn-success"
-                      style={{
-                        borderRadius: '10px',
-                        padding: '10px',
-                        fontWeight: '500',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.3s ease',
-                        ':hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 5px 15px rgba(0,0,0,0.1)'
-                        }
-                      }}
-                    >
-                      <Save size={16} className="me-2" /> Save Changes
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => {
-                        setEdit(false);
-                        setImagePreview(profile?.profileImage || null);
-                      }}
-                      style={{
-                        borderRadius: '10px',
-                        padding: '10px',
-                        fontWeight: '500',
-                        transition: 'all 0.3s ease',
-                        ':hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 5px 15px rgba(0,0,0,0.1)'
-                        }
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="bg-white p-5 rounded-4 text-center shadow">
+            <Check size={50} color="green" className="mb-3" />
+            <h3>Success!</h3>
+            <p>Profile updated successfully.</p>
+            <button className="btn btn-primary w-100" onClick={() => setShowSuccessModal(false)}>Continue</button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

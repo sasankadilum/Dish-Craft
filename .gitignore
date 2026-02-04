@@ -37,3 +37,5 @@ out/
 .vscode/
 /dishcraft
 /target
+config.bat
+node_modules

@@ -1,108 +1,115 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { 
+  FaHome, FaPlusSquare, FaSignOutAlt, 
+  FaUsers, FaUtensils, FaUserCircle 
+} from 'react-icons/fa';
+import DishCraftLogo from '../image/DishCraftLogo.png'; 
 
-const Navbar = ({ isLoggedIn = false }) => {
+const Navbar = ({ isLoggedIn = true }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [profilePic, setProfilePic] = useState(null); // Profile image එක තියාගන්න state එකක්
+  const navigate = useNavigate();
+  
+  const userId = localStorage.getItem('userId');
+  const token = localStorage.getItem('token');
+  const username = localStorage.getItem('username');
+
+  // Profile Page එකේ වගේම මෙතනදීත් Image එක Fetch කරගමු
+  useEffect(() => {
+    if (isLoggedIn && userId) {
+      axios.get(`http://localhost:8080/api/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => {
+        // ඔයාගේ API එකෙන් එන field එකට අනුව (උදා: res.data.profileImage) මෙය වෙනස් කරන්න
+        setProfilePic(res.data.profileImage || res.data.imageUrl); 
+      })
+      .catch(err => console.error("Error fetching navbar profile pic:", err));
+    }
+  }, [userId, token, isLoggedIn]);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
+  };
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm">
-      <div className="container">
-        {/* Brand */}
-        <Link to="/recipes" className="navbar-brand d-flex align-items-center">
-          <div className="bg-warning rounded-circle p-2 me-2 d-flex align-items-center justify-content-center">
-            <span className="fw-bold text-white">DC</span>
-          </div>
-          <span className="fw-bold text-warning">Dish Craft</span>
+    <nav className="navbar navbar-expand-lg sticky-top shadow-sm" style={{ 
+      backgroundColor: '#ffffff', 
+      borderBottom: '1px solid #dbdbdb',
+      padding: '10px 0'
+    }}>
+      <div className="container d-flex justify-content-between align-items-center">
+        
+        <Link className="navbar-brand d-flex align-items-center" to="/recipes">
+          <img src={DishCraftLogo} alt="Logo" style={{ height: '38px' }} />
+          <span className="ms-2 fw-bold" style={{ color: '#ff6b6b', fontSize: '22px', fontFamily: 'cursive' }}>
+            DishCraft
+          </span>
         </Link>
 
-        {/* Mobile Toggle Button */}
-        <button 
-          className="navbar-toggler border-0" 
-          type="button" 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-expanded={isMenuOpen}
-          aria-label="Toggle navigation"
-        >
+        <button className="navbar-toggler border-0" onClick={() => setIsMenuOpen(!isMenuOpen)}>
           <span className="navbar-toggler-icon"></span>
         </button>
 
-        {/* Navigation Links */}
         <div className={`collapse navbar-collapse ${isMenuOpen ? 'show' : ''}`}>
-          <ul className="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
+          <ul className="navbar-nav ms-auto align-items-center gap-2 gap-lg-4">
+            
             <li className="nav-item">
-              <Link to="/recipes" className="nav-link px-3 fw-medium">
-                Recipes
-              </Link>
+              <Link to="/recipes" className="nav-link text-dark"><FaHome size={24} /></Link>
             </li>
             <li className="nav-item">
-              <Link to="/myrecipes" className="nav-link px-3 fw-medium">
-                My Recipes
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/community-group" className="nav-link px-3 fw-medium">
-                Community Groups
-              </Link>
+              <Link to="/community-group" className="nav-link text-dark"><FaUsers size={24} /></Link>
             </li>
 
             {isLoggedIn ? (
               <>
                 <li className="nav-item">
-                  <Link to="/create-post" className="nav-link px-3 fw-medium">
-                    Create Post
-                  </Link>
+                  <Link to="/myrecipes" className="nav-link text-dark"><FaUtensils size={22} /></Link>
                 </li>
                 <li className="nav-item">
-                  <Link to="/notifications" className="nav-link px-3 position-relative">
-                    <svg xmlns="http://www.w3.org/2000/svg" 
-                        width="20" height="20" 
-                        fill="currentColor" 
-                        viewBox="0 0 16 16" 
-                        className="text-secondary">
-                      <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/>
-                    </svg>
-                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                      3
-                      <span className="visually-hidden">unread notifications</span>
-                    </span>
-                  </Link>
+                  <Link to="/add" className="nav-link text-dark"><FaPlusSquare size={23} /></Link>
                 </li>
-                <li className="nav-item ms-2">
-                  <div className="dropdown">
-                    <Link 
-                      to="/profile" 
-                      className="nav-link p-0"
-                      role="button"
-                      id="profileDropdown"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="false"
-                    >
-                      <div className="rounded-circle overflow-hidden border-3 border-warning" style={{ width: "40px", height: "40px" }}>
+
+                {/* --- Profile Image Section --- */}
+                <li className="nav-item dropdown ms-lg-2">
+                  <div 
+                    className="nav-link p-0 d-flex align-items-center dropdown-toggle no-caret"
+                    id="profileDropdown"
+                    role="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="rounded-circle border border-2 border-warning shadow-sm" 
+                         style={{ width: "38px", height: "38px", overflow: 'hidden', backgroundColor: '#eee' }}>
+                      {profilePic ? (
                         <img 
-                          src="/api/placeholder/150/150" 
+                          src={profilePic} 
                           alt="Profile" 
-                          className="img-fluid"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
-                      </div>
-                    </Link>
-                    <ul className="dropdown-menu dropdown-menu-end shadow-sm mt-2" aria-labelledby="profileDropdown">
-                      <li><Link to="/profile" className="dropdown-item">Profile</Link></li>
-                      <li><Link to="/settings" className="dropdown-item">Settings</Link></li>
-                      <li><hr className="dropdown-divider" /></li>
-                      <li><Link to="/logout" className="dropdown-item text-danger">Logout</Link></li>
-                    </ul>
+                      ) : (
+                        <FaUserCircle size={34} color="#ccc" />
+                      )}
+                    </div>
                   </div>
+                  <ul className="dropdown-menu dropdown-menu-end shadow border-0 mt-2" aria-labelledby="profileDropdown">
+                    <li className="px-3 py-2 fw-bold text-muted small">Hi, {username}</li>
+                    <li><hr className="dropdown-divider" /></li>
+                    <li><Link to="/profile" className="dropdown-item">My Profile</Link></li>
+                    <li><button onClick={handleLogout} className="dropdown-item text-danger border-0 bg-transparent w-100 text-start">
+                      Logout <FaSignOutAlt className="ms-1" />
+                    </button></li>
+                  </ul>
                 </li>
               </>
             ) : (
-              <>
-                <li className="nav-item">
-                  <Link to="/login" className="nav-link px-3 fw-medium">Profile</Link>
-                </li>
-                <li className="nav-item">
-                  
-                </li>
-              </>
+              <li className="nav-item">
+                <Link to="/login" className="btn btn-outline-warning btn-sm px-4 rounded-pill fw-bold">Login</Link>
+              </li>
             )}
           </ul>
         </div>
